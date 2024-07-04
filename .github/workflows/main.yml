@@ -4,8 +4,6 @@ on:
   pull_request:
     types:
       - create
-    branches:
-      - develop
 
 jobs:
   build:
