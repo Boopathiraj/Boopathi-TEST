@@ -1,0 +1,34 @@
+name: MUnit Tests and Maven Compile
+
+on:
+  pull_request:
+    branches:
+      - development
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up JDK
+      uses: actions/setup-java@v2
+      with:
+        java-version: '11'  # Adjust to your JDK version
+
+    - name: Compile with Maven
+      run: mvn -B compile  # Adjust Maven command as necessary
+
+    - name: Run MUnit tests
+      run: mvn -B test  # Adjust Maven command as necessary
+
+    - name: Check for test failures
+      id: check-test-results
+      run: echo "::set-output name=failed::$(grep -c 'Tests run: .* Failures: [1-9][0-9]*' target/surefire-reports/*.txt || true)"
+
+    - name: Block PR on test failure
+      if: ${{ steps.check-test-results.outputs.failed != '0' }}
+      run: |
+        echo "Tests failed. This PR cannot be merged."
+        exit 1
