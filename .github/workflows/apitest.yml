@@ -1,0 +1,58 @@
+name: API ClientID Enforcement Check
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  check-api-clientid:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests
+
+    - name: Check API ClientID Enforcement
+      env:
+        API_URL: ${{ secrets.API_URL }}
+        VALID_CLIENT_ID: ${{ secrets.VALID_CLIENT_ID }}
+      run: |
+        python - <<EOF
+        import requests
+        import os
+        import sys
+
+        api_url = os.environ['https://newsapi.org/v2/top-headlines?sources=techcrunch&apiKey=abe23449beac4561ad53cc8bc48b4137']
+        valid_client_id = os.environ['VALID_CLIENT_ID']
+
+        # Test without ClientID
+        response = requests.get(api_url)
+        print(f"Without ClientID - Status Code: {response.status_code}")
+        print(f"Without ClientID - Response: {response.text}")
+
+        # Test with valid ClientID
+        headers = {"X-Client-ID": valid_client_id}
+        response_with_id = requests.get(api_url, headers=headers)
+        print(f"With ClientID - Status Code: {response_with_id.status_code}")
+        print(f"With ClientID - Response: {response_with_id.text}")
+
+        # Check enforcement
+        if response.status_code == 401 and response_with_id.status_code == 200:
+            print("ClientID enforcement appears to be working correctly.")
+            sys.exit(0)
+        else:
+            print("ClientID enforcement may not be configured correctly.")
+            sys.exit(1)
+        EOF
